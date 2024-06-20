@@ -3,7 +3,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 # from torchvision.models import resnet101
 
-vgg_config = [64, 'M', 128, 'M', 256, 'M', 512, 'M', 512]
+vgg_config = [64, 'M', 128, 'M', 256, 'M', 512]
 
 def get_vgg_layer(config, batch_norm):
     layers = []

@@ -58,9 +58,11 @@ def nist_score(ref, pred, n):
 
 def cal_scores(ref, pred, type, n_gram):
     assert type in ['bleu', 'nist']
+    
     if type == 'bleu':
         wts = tuple([1/n_gram]*n_gram)
         return bleu_score(ref, pred, wts)
+    
     return nist_score(ref, pred, n_gram)
 
 

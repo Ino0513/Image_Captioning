@@ -1,13 +1,13 @@
 {   
     "is_attn": 0,
     
-    "data_path": "/content/drive/MyDrive/img_caption/DA35-4th-teamlkk-ImageCaptioning/data/",
-    "base_path": "/content/drive/MyDrive/data/img_cap_project/",
+    "data_path": "./data/",
+    "base_path": "./",
     "model_name": "image_captioning_model",
     "loss_data_name": "image_captioning_model",
 
 
-    "img_size": 256,
+    "img_size": 192,
     "enc_hidden_size": 14,
 
     
@@ -15,13 +15,13 @@
     "max_len": 32,
     "dec_hidden_size": 512,
     "dec_num_layers": 1,
-    "dropout": 0.5,
+    "dropout": 0.3,
 
 
-    "batch_size": 32,
-    "epochs": 100,
-    "enc_lr": 0.0001,
-    "dec_lr": 0.0004,
+    "batch_size": 64,
+    "epochs": 50,
+    "enc_lr": 0.00003,
+    "dec_lr": 0.0001,
     "regularization_lambda": 1,
 
 

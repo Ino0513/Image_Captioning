@@ -10,13 +10,13 @@ import numpy as np
 import time
 import sys
 
-from config import Config\
+from config import Config
 from utils_func import *
 from utils_data import DLoader
 from model_vgg import *
 
 # 사용할 데이터 수
-datanum = 100
+datanum = 40000
 
 class Trainer:
     def __init__(self, config:Config, device:torch.device, mode:str, continuous:int):
@@ -113,6 +113,7 @@ class Trainer:
         best_epoch_info = 0 if not self.continuous else self.loss_data['best_epoch']
 
         for epoch in range(self.epochs):
+            #torch.cuda.empty_cache()
             start = time.time()
             print(epoch+1, '/', self.epochs)
             print('-'*10)
@@ -145,9 +146,6 @@ class Trainer:
                         decoder_all_output = torch.cat(decoder_all_output, dim=1)
 
                         loss = self.criterion(decoder_all_output[:, :-1, :].reshape(-1, decoder_all_output.size(-1)), cap[:, 1:].reshape(-1))
-                        if self.config.is_attn:
-                            decoder_all_score = torch.cat(decoder_all_score, dim=2)
-                            loss += self.config.regularization_lambda * ((1. - torch.sum(decoder_all_score, dim=2)) ** 2).mean()
                         acc = topk_accuracy(decoder_all_output[:, :-1, :], cap[:, 1:], self.config.topk, self.tokenizer.eos_token_id)
                         if phase == 'train':
                             loss.backward()
@@ -194,7 +192,7 @@ class Trainer:
                         save_checkpoint(self.model_path, [self.encoder, self.decoder], [self.enc_optimizer, self.dec_optimizer])
 
             print("time: {} s\n".format(time.time() - start))
-            print('\n'*2)
+            print('\n')            
 
             # early stopping
             if early_stop == self.config.early_stop_criterion:
@@ -227,20 +225,14 @@ class Trainer:
                     trg_word = cap[:, j].unsqueeze(1)
                     dec_output, hidden, score = self.decoder(trg_word, hidden, enc_output)
                     decoder_all_output.append(dec_output)
-                    if self.config.is_attn:
-                        decoder_all_score.append(score)
 
                 decoder_all_output = torch.cat(decoder_all_output, dim=1)
-                if self.config.is_attn:
-                    decoder_all_score = torch.cat(decoder_all_score, dim=2)
 
                 loss = self.criterion(decoder_all_output[:, :-1, :].reshape(-1, decoder_all_output.size(-1)), cap[:, 1:].reshape(-1))
                 loss += self.config.regularization_lambda * ((1. - torch.sum(decoder_all_score, dim=2)) ** 2).mean()
                 
                 all_val_trg.append(cap.detach().cpu())
                 all_val_output.append(decoder_all_output.detach().cpu())
-                if self.config.is_attn:
-                    all_val_score.append(decoder_all_score.detach().cpu())
 
                 total_loss += loss.item()*batch
 
@@ -288,20 +280,13 @@ class Trainer:
                         dec_output, hidden, score = self.decoder(trg_word.detach(), hidden, enc_output)
                     
                     decoder_all_output.append(dec_output)
-                    if self.config.is_attn:
-                        decoder_all_score.append(score)
 
                 decoder_all_output = torch.cat(decoder_all_output, dim=1)
-                if self.config.is_attn:
-                    decoder_all_score = torch.cat(decoder_all_score, dim=2)
 
                 loss = self.criterion(decoder_all_output[:, :-1, :].reshape(-1, decoder_all_output.size(-1)), cap[:, 1:].reshape(-1))
-                loss += self.config.regularization_lambda * ((1. - torch.sum(decoder_all_score, dim=2)) ** 2).mean()
                 
                 all_val_trg.append(cap.detach().cpu())
                 all_val_output.append(decoder_all_output.detach().cpu())
-                if self.config.is_attn:
-                    all_val_score.append(decoder_all_score.detach().cpu())
 
                 total_loss += loss.item()*batch
             all_ids = torch.cat(all_ids, dim=0).tolist()
@@ -324,13 +309,9 @@ class Trainer:
         random.seed(int(1000*time.time())%(2**32))
         all_val_trg = torch.cat(all_val_trg, dim=0)
         all_val_output = torch.argmax(torch.cat(all_val_output, dim=0), dim=2)
-        ids = random.sample(list(range(all_val_trg.size(0))), 10)
+        ids = random.sample(list(range(all_val_trg.size(0))), 100)
         img_id = [self.img_folder+self.all_pairs[j][0] for j in [all_ids[i] for i in ids]]
         gt, pred = print_samples(all_val_trg, all_val_output, self.tokenizer, result_num, ids)
-        if self.config.is_attn:
-            all_val_score = torch.cat(all_val_score, dim=0)
-            pred_l = [len(self.tokenizer.tokenize(s)) for s in pred]
-            attn_img = [all_val_score[i, :, :l] for i, l in zip(ids, pred_l)]
 
         # save result figures
         results_save_path = self.base_path + 'result/' + model_name + '/'
